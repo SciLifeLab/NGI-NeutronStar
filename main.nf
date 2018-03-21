@@ -1,15 +1,13 @@
 #!/usr/bin/env nextflow
 /*
-vim: syntax=groovy
--*- mode: groovy;-*-
 ========================================================================================
                          NGI-NeutronStar
 ========================================================================================
- NGI-NeutronStar Analysis Pipeline. 
+ NGI-NeutronStar Analysis Pipeline.
  #### Homepage / Documentation
  https://github.com/scilifelab/NGI-NeutronStar
  #### Authors
- Remi-Andre Olsen remiolsen <remi-andre.olsen@scilifelab.se> - https://github.com/remiolsen>
+ Remi-Andre Olsen remiolsen <remi-andre.olsen@scilifelab.se> - https://github.com/remiolsen
 ----------------------------------------------------------------------------------------
 */
 
@@ -64,7 +62,7 @@ version = '0.5dev'
 
 log.info "     \\|/"
 log.info "  ----*----   N G I - N e u t r o n S t a r (${version})"
-log.info "     /|\\"   
+log.info "     /|\\"
 log.info ""
 // Show help emssage
 params.help = false
@@ -74,7 +72,7 @@ if (params.help){
 }
 
 // Common options for both supernova and longranger
-def TenX_optional = {sample, lanes, indices, project->
+def TenX_optional = { sample, lanes, indices, project ->
     def str = ""
     sample!=null ? str <<= "--sample=${sample} " : null
     lanes!=null ? str <<= "--lanes=${lanes} " : null
@@ -83,7 +81,7 @@ def TenX_optional = {sample, lanes, indices, project->
     return str
 }
 // Now only supernova options
-def supernova_optional = {maxreads, bcfrac, nopreflight->
+def supernova_optional = { maxreads, bcfrac, nopreflight ->
     def str = ""
     maxreads!=null ? str <<= "--maxreads=${maxreads} " : null
     bcfrac!=null ? str <<= "--bcfrac=${bcfrac} " : null
@@ -96,7 +94,7 @@ def supernova_optional = {maxreads, bcfrac, nopreflight->
 params.name = false
 params.email = false
 params.plaintext_email = false
-params.outdir="."
+params.outdir = "."
 params.mqc_config = "$baseDir/misc/multiqc_config.yaml"
 params.minsize = 1000
 params.full_output = false
@@ -115,7 +113,7 @@ if( !(workflow.runName ==~ /[a-z]+_[a-z]+/) ){
 
 
 samples = []
-if (params.samples == null) { //We don't have sample JSON/YAML file, just use cmd-line
+if (params.samples == null) { // We don't have sample JSON/YAML file, just use cmd-line
     assert params.id != null : "Missing --id option"
     assert params.fastqs != null : "Missing --fastqs option"
     s = []
@@ -128,7 +126,7 @@ if (params.samples == null) { //We don't have sample JSON/YAML file, just use cm
 
 params.samples = []
 
-for (sample in params.samples) { 
+for (sample in params.samples) {
     assert sample.id != null : "Error in input parameter file"
     assert sample.fastqs != null : "Error in input parameter file"
     s = []
@@ -136,11 +134,11 @@ for (sample in params.samples) {
     s << sample.fastqs
     s << TenX_optional(sample.sample, sample.lanes, sample.indices, sample.project)
     s << supernova_optional(sample.maxreads, sample.bcfrac, sample.nopreflight)
-    samples << s  
+    samples << s
 }
 
 
-//Extra parameter evaluation
+// Extra parameter evaluation
 for (sample in params.samples) {
     assert sample.id.size() == sample.id.findAll(/[A-z0-9\\.\-]/).size() : "Illegal character(s) in sample ID: ${sample.id}."
     assert new File(sample.fastqs).exists() : "Path not found ${sample.fastqs}"
@@ -149,7 +147,7 @@ assert new File(buscoPath).exists() : "Path not found ${buscoPath}"
 
 // Check that Nextflow version is up to date enough
 // try / throw / catch works for NF versions < 0.25 when this was implemented
-nf_required_version = '0.25.0'
+nf_required_version = '0.28.0'
 try {
     if( ! nextflow.version.matches(">= $nf_required_version") ){
         throw new RuntimeException('Nextflow version too old')
@@ -178,7 +176,7 @@ summary['Config Profile'] = workflow.profile
 if(params.email) summary['E-mail Address'] = params.email
 log.info summary.collect { k,v -> "${k.padRight(15)}: $v" }.join("\n")
 
-for (i in samples) {  
+for (i in samples) {
     log.info "  supernova run --id=${i[0]} --fastqs=${i[1]} ${i[2]} ${i[3]}"
 }
 
@@ -186,7 +184,7 @@ for (i in samples) {
 process software_versions {
 
     output:
-        file 'software_versions_mqc.yaml' into software_versions_yaml
+    file 'software_versions_mqc.yaml' into software_versions_yaml
 
     script:
     """
@@ -201,14 +199,10 @@ process software_versions {
 }
 
 
-Channel
-    .from(samples)
-    .set { supernova_input }
-
-
+supernova_input = Channel.from(samples)
 if (params.full_output) {
     process supernova_full {
-        tag "${id}"
+        tag id
         publishDir "${params.outdir}/supernova/", mode: 'copy'
 
         input:
@@ -219,13 +213,17 @@ if (params.full_output) {
 
         script:
         """
-        supernova run --id=${id} --fastqs=${fastqs} ${tenx_options} ${supernova_options}
+        supernova run \\
+            --id=$id \\
+            --fastqs=$fastqs \\
+            $tenx_options \\
+            $supernova_options
         """
     }
 
 }else {
     process supernova {
-        tag "${id}"
+        tag id
         publishDir "${params.outdir}/supernova/", mode: 'copy'
 
         input:
@@ -236,15 +234,39 @@ if (params.full_output) {
 
         script:
         """
-        supernova run --id=${id} --fastqs=${fastqs} ${tenx_options} ${supernova_options}
-        rsync -rav --include="_*" --include="*.tgz" --include="outs/" --include="outs/*.*"  --include="assembly/" --include="stats/***" --include="logs/***" --include="a.base/" --include="a.base/" --include="a.hbx" --include="a.inv" --include="final/***" --include="gang" --include="micro"  --include="a.hbx" --include="a.inv" --include="final/***" --exclude="*" "${id}/" ${id}_supernova
+        supernova run \\
+            --id=$id \\
+            --fastqs=$fastqs \\
+            $tenx_options \\
+            $supernova_options
+        rsync \\
+            -rav \\
+            --include="_*" \\
+            --include="*.tgz" \\
+            --include="outs/" \\
+            --include="outs/*.*" \\
+            --include="assembly/" \\
+            --include="stats/***" \\
+            --include="logs/***" \\
+            --include="a.base/" \\
+            --include="a.base/" \\
+            --include="a.hbx" \\
+            --include="a.inv" \\
+            --include="final/***" \\
+            --include="gang" \\
+            --include="micro"  \\
+            --include="a.hbx" \\
+            --include="a.inv" \\
+            --include="final/***" \\
+            --exclude="*" \\
+                "${id}/" ${id}_supernova
         """
     }
 
 }
 
 process mkoutput {
-    tag "${id}"
+    tag id
     publishDir "${params.outdir}/assemblies/", mode: 'copy'
 
     input:
@@ -256,15 +278,23 @@ process mkoutput {
 
     script:
     """
-    supernova mkoutput --asmdir=${id}_supernova/outs/assembly --outprefix=${id} --style=pseudohap --minsize=${params.minsize}
-    supernova mkoutput --asmdir=${id}_supernova/outs/assembly --outprefix=${id}.phased --style=megabubbles --minsize=${params.minsize}
+    supernova mkoutput \\
+        --asmdir=${id}_supernova/outs/assembly \\
+        --outprefix=$id \\
+        --style=pseudohap \\
+        --minsize=$params.minsize
+    supernova mkoutput \\
+        --asmdir=${id}_supernova/outs/assembly \\
+        --outprefix=${id}.phased \\
+        --style=megabubbles \\
+        --minsize=$params.minsize
     gzip -d ${id}.fasta.gz
     gzip -d ${id}.phased.fasta.gz
     """
 }
 
 process quast {
-    tag "${id}"
+    tag id
     publishDir "${params.outdir}/quast/${id}", mode: 'copy'
 
     input:
@@ -272,17 +302,17 @@ process quast {
 
     output:
     file("quast_results/latest/*") into quast_results
- 
+
     script:
-    def size_parameter = params.genomesize!=null ? "--est-ref-size ${params.genomesize}" : "" 
+    def size_parameter = params.genomesize != null ? "--est-ref-size ${params.genomesize}" : ""
     """
-    quast.py ${size_parameter} --threads ${task.cpus} ${asm}
+    quast.py $size_parameter --threads $task.cpus $asm
     """
 }
 
 if(workflow.container == [:]) { //BUSCO is installed on this system
     process busco {
-        tag "${id}"
+        tag id
         publishDir "${params.outdir}/busco/", mode: 'copy'
 
         input:
@@ -295,13 +325,13 @@ if(workflow.container == [:]) { //BUSCO is installed on this system
         // If statement is only for UPPMAX HPC environments, it shouldn't mess up anything else
         """
         if ! [ -z \${BUSCO_SETUP+x} ]; then source \$BUSCO_SETUP; fi
-        BUSCO.py -i ${asm} -o ${id} -c ${task.cpus} -m genome -l ${buscoPath}
+        BUSCO.py -i $asm -o $id -c $task.cpus -m genome -l $buscoPath
         """
     }
 }
 else { // We assume we are running the ngi-neutronstar Docker/Singularity container
     process busco_containerized {
-        tag "${id}"
+        tag id
         publishDir "${params.outdir}/busco/", mode: 'copy'
 
         input:
@@ -314,9 +344,9 @@ else { // We assume we are running the ngi-neutronstar Docker/Singularity contai
 
         script:
         """
-        mkdir busco_config; print_busco_config.py > busco_config/config.ini 
+        mkdir busco_config; print_busco_config.py > busco_config/config.ini
         tar xfj $baseDir/misc/augustus_config.tar.bz2
-        BUSCO.py -i ${asm} -o ${id} -c ${task.cpus} -m genome -l ${buscoPath}
+        BUSCO.py -i $asm -o $id -c $task.cpus -m genome -l $buscoPath
         """
     }
 
@@ -326,10 +356,10 @@ process multiqc {
     publishDir "${params.outdir}/multiqc"
 
     input:
-    file ('supernova/') from supernova_results2.flatten().toList()
-    file ('busco/') from busco_results.flatten().toList()
-    file ('quast/') from quast_results.flatten().toList()
-    file ('software_versions/') from software_versions_yaml.flatten().toList()
+    file ('supernova/') from supernova_results2.toList()
+    file ('busco/') from busco_results.toList()
+    file ('quast/') from quast_results.toList()
+    file ('software_versions/') from software_versions_yaml.toList()
 
     output:
     file "*multiqc_report.html"
@@ -337,8 +367,8 @@ process multiqc {
 
     script:
     """
-    multiqc -i ${custom_runName} -f -s  --config ${params.mqc_config} .
-    """    
+    multiqc -i $custom_runName -f -s --config $params.mqc_config .
+    """
 }
 
 
