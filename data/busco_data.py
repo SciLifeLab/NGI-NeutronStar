@@ -9,10 +9,10 @@ from itertools import chain
 def get_pretty(url):
     pretty_name = url.split('/')[-1]
     return pretty_name.split(".tar.gz")[0]
-    
+
 
 if __name__ == '__main__':
-    buscos = {} 
+    buscos = {}
     try:
         with open("buscov2datasets.json", "r") as f:
             buscos = json.loads(f.read())
@@ -57,4 +57,3 @@ if __name__ == '__main__':
             tar = subprocess.Popen(['tar', 'zx'], stdin=wget.stdout)
             output = tar.communicate()
         print("## finished downloading")
-
