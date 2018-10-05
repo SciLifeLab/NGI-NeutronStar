@@ -2,6 +2,27 @@
 
 [![Nextflow](https://img.shields.io/badge/nextflow-%E2%89%A50.25.1-brightgreen.svg)](https://www.nextflow.io/)
 
+# This pipeline has moved!
+
+This pipeline has been moved to the new [nf-core](http://nf-co.re/) project.
+You can now find it here:
+
+### https://github.com/nf-core/neutronstar
+
+If you have any problems with the pipeline, please create an issue at the above repository instead.
+
+To find out more about nf-core, visit [http://nf-co.re/](http://nf-co.re/)
+
+This repository will be archived to maintain the released versions for future reruns, in the spirit of full reproducibility.
+
+If you have any questions, please get in touch: support@ngisweden.se
+
+// [Phil Ewels](http://github.com/ewels/), 2018-10-05
+
+---
+
+
+
 ## Table of Contents
 
 1. [Introduction](README.md#introduction)
